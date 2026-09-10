@@ -49,20 +49,19 @@ A script that branched on `exit == 0` would miss the first; one that branched on
 
 The default is `safe+vulns,safe+dated+no-overrides`, which applies patch-level
 updates only. Vulnerabilities whose fix needs a minor bump require
-`--autofix "conservative+vulns"`; only fixes that require a new major version
-need `"aggressive+vulns"`. Measured against the `vulnerable-demo` branch:
+`--autofix "conservative+vulns"`. Measured against the `vulnerable-demo` branch:
 
 | Strategy | commons-collections 3.2.1 | jackson-databind 2.9.8 | log4j-core 2.17.0 | Security score |
 |---|---|---|---|---|
 | `safe` (default) | → 3.2.2 | unchanged | unchanged | 0 |
 | `conservative+vulns` | → 3.2.2 | → 2.22.2 | → 2.26.1 | 100 |
-| `aggressive+vulns` | → 3.2.2 | → 2.22.2 | → 2.26.1 | 100 |
 
-`conservative` and `aggressive` produce identical output here, because every
-fix these three dependencies need is a minor bump within their current major
-version. Reach for `conservative` first and escalate only if it leaves
-vulnerabilities unfixed — `aggressive` permits major upgrades, and so carries a
-real risk of incompatible changes for no benefit in cases like this one.
+Use the weakest strategy that clears your vulnerabilities: `--dry-run` answers
+that in one pass without touching anything. There is also an `aggressive`
+strategy permitting major upgrades, but it is rarely needed — here it produces
+output identical to `conservative`, since every fix required is a minor bump.
+See the [autofix documentation](https://docs.meterian.io/the-client/command-line-parameters/advanced-options/autofix)
+for the full set of strategies and reach options.
 
 Always check that the build still passes before merging.
 

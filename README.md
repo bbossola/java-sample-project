@@ -14,9 +14,9 @@ export METERIAN_API_TOKEN=<your token>
 # fix the default branch, push the fixes on a timestamped branch
 ./scripts/meterian-autofix.sh git@github.com:you/your-repo.git
 
-# fix a specific branch, allow major version bumps, and open a pull request
+# fix a specific branch, allow minor version bumps, and open a pull request
 ./scripts/meterian-autofix.sh git@github.com:you/your-repo.git \
-    --branch develop --autofix "aggressive+vulns" --pull-request
+    --branch develop --autofix "conservative+vulns" --pull-request
 
 # see what would change without pushing anything
 ./scripts/meterian-autofix.sh git@github.com:you/your-repo.git --dry-run
@@ -40,7 +40,7 @@ This is not a theoretical concern. Both of these runs applied fixes:
 | Invocation | Client exit code | Fixes applied |
 |---|---|---|
 | `--autofix` (default `safe`) | `1` | 1 of 3 — score still below minimum |
-| `--autofix "aggressive+vulns"` | `0` | 3 of 3 — score back above minimum |
+| `--autofix "conservative+vulns"` | `0` | 3 of 3 — score back above minimum |
 
 A script that branched on `exit == 0` would miss the first; one that branched on
 `exit != 0` would miss the second.
@@ -48,17 +48,23 @@ A script that branched on `exit == 0` would miss the first; one that branched on
 ### Choosing a strategy
 
 The default is `safe+vulns,safe+dated+no-overrides`, which applies patch-level
-updates only. Vulnerabilities whose fix needs a minor or major bump require
-`--autofix "conservative+vulns"` or `"aggressive+vulns"`, at the usual risk of
-incompatible changes. Measured against the `vulnerable-demo` branch:
+updates only. Vulnerabilities whose fix needs a minor bump require
+`--autofix "conservative+vulns"`; only fixes that require a new major version
+need `"aggressive+vulns"`. Measured against the `vulnerable-demo` branch:
 
 | Strategy | commons-collections 3.2.1 | jackson-databind 2.9.8 | log4j-core 2.17.0 | Security score |
 |---|---|---|---|---|
 | `safe` (default) | → 3.2.2 | unchanged | unchanged | 0 |
+| `conservative+vulns` | → 3.2.2 | → 2.22.2 | → 2.26.1 | 100 |
 | `aggressive+vulns` | → 3.2.2 | → 2.22.2 | → 2.26.1 | 100 |
 
-Always check that the build still passes before merging, especially with
-`aggressive`.
+`conservative` and `aggressive` produce identical output here, because every
+fix these three dependencies need is a minor bump within their current major
+version. Reach for `conservative` first and escalate only if it leaves
+vulnerabilities unfixed — `aggressive` permits major upgrades, and so carries a
+real risk of incompatible changes for no benefit in cases like this one.
+
+Always check that the build still passes before merging.
 
 ### Other notes
 

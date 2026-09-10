@@ -25,7 +25,7 @@ branches exist to exercise the scanner, not to build anything useful.
 The Meterian client exits non-zero whenever the security score is below the
 minimum threshold, which is exactly the situation where it has just applied
 fixes. Verified against `vulnerable-demo`: the default `safe` strategy exits 1
-having fixed one dependency, `aggressive+vulns` exits 0 having fixed three.
+having fixed one dependency, `conservative+vulns` exits 0 having fixed three.
 Branching on either exit code value gets one of those cases wrong. If you are
 tempted to "simplify" the script by checking `$?`, this is why you should not.
 
@@ -52,6 +52,13 @@ client's back; the noise in the diff is the lesser evil.
 Action running a Meterian scan on every branch. It was dropped so the autofix
 script is the only thing invoking the client — a scan firing on every push made
 demo runs confusing. Do not re-add it without asking.
+
+**Demos use `conservative+vulns`, not `aggressive`.** All three vulnerable
+demo dependencies are fixed by minor bumps, so `conservative` and `aggressive`
+produce byte-identical output and the same 0 → 100 score. Recommending
+`aggressive` where `conservative` suffices tells customers to accept major
+version upgrades for nothing. Escalate strategy only when the weaker one
+demonstrably leaves vulnerabilities unfixed.
 
 ## Conventions
 

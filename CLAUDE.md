@@ -43,10 +43,14 @@ or unauthenticated, rather than silently degrading.
 resolves to the branch that was cloned, it aborts. Autofix output always lands
 on a separate branch for review.
 
-**The client's cosmetic XML damage is left alone.** Its rewriter joins the
-`<?xml ...?>` declaration onto the `<project>` line and strips the trailing
-newline. Post-processing that would mean the script edits manifests behind the
-client's back; the noise in the diff is the lesser evil.
+**The cached client jar is refreshed on every run.** `resolve_client` does a
+conditional GET (`curl -z` plus `-R`) rather than downloading only when the file
+is absent. The first version of this script cached forever, and the demo was
+consequently run with a jar nine months stale — which produced a reformatted
+`pom.xml` and a README note claiming the client mangles XML. It does not: the
+client applies fixes as targeted text edits from 1.2.41 onwards. Never
+reintroduce a download-if-missing cache; a security scanner pinned to an old
+build is worse than a slow one.
 
 **The CI workflow was removed deliberately.** There was a `on: push` GitHub
 Action running a Meterian scan on every branch. It was dropped so the autofix

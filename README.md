@@ -58,9 +58,11 @@ updates only. Vulnerabilities whose fix needs a minor bump require
 
 `conservative` also refreshes dependencies that are merely outdated rather than
 vulnerable — on this branch it additionally bumps `commons-lang3` 3.18.0 → 3.20.0,
-taking the stability score from 97 to 100. Append a reach to narrow it to
-security fixes only (`conservative+vulns`) if you would rather keep the diff to
-what addresses a CVE.
+taking the stability score from 97 to 100 — and pins vulnerable transitive
+dependencies by adding explicit overrides (here `jackson-core` and `log4j-api`).
+Append a reach to narrow it to security fixes only (`conservative+vulns`), or
+add `no-overrides` to stop it introducing new direct dependencies, if you would
+rather keep the diff to what addresses a CVE.
 
 Use the weakest strategy that clears your vulnerabilities: `--dry-run` answers
 that in one pass without touching anything. There is also an `aggressive`
@@ -73,9 +75,11 @@ Always check that the build still passes before merging.
 
 ### Other notes
 
-- The client's XML rewriter joins the `<?xml ...?>` declaration onto the
-  `<project>` line and drops the file's trailing newline. It is cosmetic, but it
-  shows up in every autofix diff. The script deliberately does not post-process
-  the client's output.
+- The script refreshes the cached client jar on every run via a conditional
+  GET, so it always scans with the currently published version. Client releases
+  before 1.2.41 reformatted `pom.xml` while fixing it — rewriting the `<?xml ?>`
+  declaration and dropping the trailing newline — which made autofix diffs noisy;
+  1.2.41 onwards applies each fix as a targeted text edit and leaves the rest of
+  the file byte-identical.
 - The `vulnerable-demo` branch carries deliberately vulnerable dependencies to
   demonstrate the script against.

@@ -105,12 +105,35 @@ resolve_client() {
         echo "$METERIAN_CLI_JAR"; return
     fi
 
-    if [ ! -f "$CLI_CACHE" ]; then
+    mkdir -p "$(dirname "$CLI_CACHE")"
+
+    # Conditional GET: -z sends If-Modified-Since from the cached jar's
+    # timestamp and -R stamps the reply's Last-Modified onto it, so a cached
+    # client refreshes as soon as a new one is published. Scanning for
+    # vulnerabilities with a client that never updates is not worth the
+    # saved bandwidth.
+    if [ -f "$CLI_CACHE" ]; then
+        log "checking for a newer Meterian client"
+    else
         log "downloading the Meterian client to $CLI_CACHE"
-        mkdir -p "$(dirname "$CLI_CACHE")"
-        curl -fsSL "$CLI_URL" -o "$CLI_CACHE.tmp" || die "could not download $CLI_URL"
-        mv "$CLI_CACHE.tmp" "$CLI_CACHE"
     fi
+
+    if curl -fsSL -R -z "$CLI_CACHE" -o "$CLI_CACHE.tmp" "$CLI_URL"; then
+        if [ -s "$CLI_CACHE.tmp" ]; then
+            mv "$CLI_CACHE.tmp" "$CLI_CACHE"
+            log "using the Meterian client published $(date -r "$CLI_CACHE" '+%Y-%m-%d')"
+        else
+            # 304 Not Modified: curl truncated the placeholder, keep the cache.
+            rm -f "$CLI_CACHE.tmp"
+            log "the cached client is up to date"
+        fi
+    else
+        rm -f "$CLI_CACHE.tmp"
+        # A failed refresh is survivable if we already have a client.
+        [ -f "$CLI_CACHE" ] || die "could not download $CLI_URL"
+        log "warning: could not reach $CLI_URL, using the cached client from $(date -r "$CLI_CACHE" '+%Y-%m-%d')"
+    fi
+
     echo "$CLI_CACHE"
 }
 

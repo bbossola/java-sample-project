@@ -10,8 +10,13 @@
 set -euo pipefail
 
 readonly PROGNAME="${0##*/}"
-readonly CLI_URL="https://www.meterian.com/downloads/meterian-cli.jar"
-readonly CLI_CACHE="${HOME}/.meterian/meterian-cli.jar"
+# On-premises and dedicated instances serve their own pre-configured client;
+# METERIAN_CLI_URL points at it. The cache is keyed on the host so switching
+# between instances does not reuse the wrong jar.
+readonly CLI_URL="${METERIAN_CLI_URL:-https://www.meterian.com/downloads/meterian-cli.jar}"
+CLI_HOST="$(printf '%s' "$CLI_URL" | sed -E 's#^[a-z]+://([^/]+)/.*#\1#')"
+readonly CLI_HOST
+readonly CLI_CACHE="${HOME}/.meterian/${CLI_HOST}/meterian-cli.jar"
 
 # --- options ----------------------------------------------------------------
 
@@ -42,9 +47,16 @@ Options:
   -h, --help            Show this help
 
 Environment:
-  METERIAN_API_TOKEN    Required. Your Meterian API token.
-  METERIAN_CLI_JAR      Optional. Path to an existing meterian-cli.jar;
-                        otherwise it is downloaded to $CLI_CACHE.
+  METERIAN_API_TOKEN    Required. Your Meterian API token. On a dedicated or
+                        on-premises instance, use a token issued by that
+                        instance -- a meterian.com token will not work.
+  METERIAN_CLI_URL      Optional. Where to download the client from. Dedicated
+                        and on-premises instances serve their own pre-configured
+                        client, so set this to
+                        https://<your-instance>/downloads/meterian-cli.jar
+                        (default: $CLI_URL)
+  METERIAN_CLI_JAR      Optional. Path to an existing meterian-cli.jar, used
+                        instead of downloading one.
 
 Exit codes:
   0  fixes pushed, or nothing to fix
@@ -166,7 +178,7 @@ main() {
     [ "$FIX_BRANCH" != "$src_branch" ] \
         || die "the fix branch and the source branch are both '$src_branch'; refusing to push onto it"
 
-    log "running the Meterian client with autofix"
+    log "running the Meterian client with autofix (instance: $CLI_HOST)"
     # The client exits non-zero whenever the security score is below threshold,
     # which is precisely the case where it has just fixed something. So its exit
     # code cannot tell us whether fixes were applied -- git can. Report it and

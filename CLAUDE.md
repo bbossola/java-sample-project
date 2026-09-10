@@ -66,6 +66,13 @@ also refreshes merely-outdated dependencies (it bumps commons-lang3 3.18.0 →
 the narrower `conservative+vulns`. Use `+vulns` when a diff limited strictly to
 CVE fixes matters more than brevity.
 
+**The client download URL is configurable, and the cache is keyed by host.**
+Dedicated and on-premises instances serve their own pre-configured jar; there is
+no env var that repoints the public client at a private server. `METERIAN_CLI_URL`
+selects it and the cache lives in `~/.meterian/<host>/`, so a user who works
+against both a private instance and the public cloud cannot end up scanning with
+the wrong client. Tokens are per-instance too and are not interchangeable.
+
 ## Conventions
 
 - The script targets bash with `set -euo pipefail`; keep it dependency-free

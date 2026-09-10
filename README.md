@@ -69,6 +69,29 @@ It reports `no manifests were changed: nothing to fix` and exits 0, creating no
 branch. That is the normal result on a healthy repository, and it is what makes
 the script safe to run on a schedule.
 
+### Dedicated and on-premises instances
+
+A dedicated or on-premises Meterian instance serves its **own pre-configured
+client**: there is no environment variable that repoints the public client at a
+private server. Set `METERIAN_CLI_URL` to your instance's download endpoint, and
+use a token issued by that instance — a meterian.com token will not authenticate
+against it.
+
+```bash
+export METERIAN_CLI_URL=https://your-instance.example.com/downloads/meterian-cli.jar
+export METERIAN_API_TOKEN=<a token from your instance>
+
+./scripts/meterian-autofix.sh git@github.com:you/your-repo.git --autofix conservative
+```
+
+Jars are cached per host under `~/.meterian/<host>/`, so switching between
+instances never reuses the wrong client. To check which instance a client talks
+to, run it directly: `java -jar meterian-cli.jar --help` prints the server and
+the account it is authorized for. If your instance uses a certificate from a
+private CA, pass `--use-ssl-certificates=/path/to/cert.pem`; the client picks up
+`http_proxy` and `https_proxy` on its own. See the
+[dedicated instance documentation](https://docs.meterian.io/dedicated-instance/using-the-scanners/thin-client).
+
 ### Why fixes are detected from git, not from the exit code
 
 The client exits non-zero whenever the security score is below the minimum —

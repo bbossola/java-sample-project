@@ -25,8 +25,49 @@ export METERIAN_API_TOKEN=<your token>
 Run `./scripts/meterian-autofix.sh --help` for all options.
 
 The script needs `git`, `java`, `mvn` and `curl`; `--pull-request` additionally
-needs an authenticated [`gh`](https://cli.github.com). The client jar is
-downloaded once and cached in `~/.meterian/`.
+needs an authenticated [`gh`](https://cli.github.com). The client jar is cached
+in `~/.meterian/` and refreshed whenever a newer one is published.
+
+### Try it on this repository
+
+This repository is set up to demonstrate the script. Its `vulnerable-demo`
+branch carries three deliberately vulnerable dependencies — `commons-collections`
+3.2.1, `jackson-databind` 2.9.8 and `log4j-core` 2.17.0 — which score 0 out of
+100 on security.
+
+```bash
+git clone git@github.com:bbossola/java-sample-project.git
+cd java-sample-project
+export METERIAN_API_TOKEN=<your token>
+
+# 1. see what would change, without touching anything
+./scripts/meterian-autofix.sh git@github.com:bbossola/java-sample-project.git \
+    --branch vulnerable-demo --autofix conservative --dry-run
+
+# 2. the real thing: push the fixes on a new branch and open a pull request
+./scripts/meterian-autofix.sh git@github.com:bbossola/java-sample-project.git \
+    --branch vulnerable-demo --autofix conservative --pull-request
+```
+
+The second command clones the branch into a temporary directory, runs the
+client, finds that `pom.xml` was changed, commits it on a new branch named
+`meterian-autofix-<timestamp>`, pushes it, and prints the URL of the pull
+request it opened. The security score goes from 0 to 100. Nothing is written to
+your working copy — the script works entirely in its own clone.
+
+You need push rights on the repository for step 2; fork it first and use your
+own fork's URL otherwise. Step 1 needs only read access.
+
+To see the other outcome, run it against `master`, whose dependencies are
+current:
+
+```bash
+./scripts/meterian-autofix.sh git@github.com:bbossola/java-sample-project.git
+```
+
+It reports `no manifests were changed: nothing to fix` and exits 0, creating no
+branch. That is the normal result on a healthy repository, and it is what makes
+the script safe to run on a schedule.
 
 ### Why fixes are detected from git, not from the exit code
 
@@ -81,5 +122,3 @@ Always check that the build still passes before merging.
   declaration and dropping the trailing newline — which made autofix diffs noisy;
   1.2.41 onwards applies each fix as a targeted text edit and leaves the rest of
   the file byte-identical.
-- The `vulnerable-demo` branch carries deliberately vulnerable dependencies to
-  demonstrate the script against.

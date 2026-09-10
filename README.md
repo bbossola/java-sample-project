@@ -16,7 +16,7 @@ export METERIAN_API_TOKEN=<your token>
 
 # fix a specific branch, allow minor version bumps, and open a pull request
 ./scripts/meterian-autofix.sh git@github.com:you/your-repo.git \
-    --branch develop --autofix "conservative+vulns" --pull-request
+    --branch develop --autofix conservative --pull-request
 
 # see what would change without pushing anything
 ./scripts/meterian-autofix.sh git@github.com:you/your-repo.git --dry-run
@@ -40,7 +40,7 @@ This is not a theoretical concern. Both of these runs applied fixes:
 | Invocation | Client exit code | Fixes applied |
 |---|---|---|
 | `--autofix` (default `safe`) | `1` | 1 of 3 — score still below minimum |
-| `--autofix "conservative+vulns"` | `0` | 3 of 3 — score back above minimum |
+| `--autofix conservative` | `0` | all 3 — score back above minimum |
 
 A script that branched on `exit == 0` would miss the first; one that branched on
 `exit != 0` would miss the second.
@@ -49,17 +49,23 @@ A script that branched on `exit == 0` would miss the first; one that branched on
 
 The default is `safe+vulns,safe+dated+no-overrides`, which applies patch-level
 updates only. Vulnerabilities whose fix needs a minor bump require
-`--autofix "conservative+vulns"`. Measured against the `vulnerable-demo` branch:
+`--autofix conservative`. Measured against the `vulnerable-demo` branch:
 
 | Strategy | commons-collections 3.2.1 | jackson-databind 2.9.8 | log4j-core 2.17.0 | Security score |
 |---|---|---|---|---|
 | `safe` (default) | → 3.2.2 | unchanged | unchanged | 0 |
-| `conservative+vulns` | → 3.2.2 | → 2.22.2 | → 2.26.1 | 100 |
+| `conservative` | → 3.2.2 | → 2.22.2 | → 2.26.1 | 100 |
+
+`conservative` also refreshes dependencies that are merely outdated rather than
+vulnerable — on this branch it additionally bumps `commons-lang3` 3.18.0 → 3.20.0,
+taking the stability score from 97 to 100. Append a reach to narrow it to
+security fixes only (`conservative+vulns`) if you would rather keep the diff to
+what addresses a CVE.
 
 Use the weakest strategy that clears your vulnerabilities: `--dry-run` answers
 that in one pass without touching anything. There is also an `aggressive`
-strategy permitting major upgrades, but it is rarely needed — here it produces
-output identical to `conservative`, since every fix required is a minor bump.
+strategy permitting major upgrades, but it is rarely needed — here it fixes
+nothing that `conservative` does not, since every fix required is a minor bump.
 See the [autofix documentation](https://docs.meterian.io/the-client/command-line-parameters/advanced-options/autofix)
 for the full set of strategies and reach options.
 

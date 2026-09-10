@@ -25,7 +25,7 @@ branches exist to exercise the scanner, not to build anything useful.
 The Meterian client exits non-zero whenever the security score is below the
 minimum threshold, which is exactly the situation where it has just applied
 fixes. Verified against `vulnerable-demo`: the default `safe` strategy exits 1
-having fixed one dependency, `conservative+vulns` exits 0 having fixed three.
+having fixed one vulnerability, `conservative` exits 0 having fixed all three.
 Branching on either exit code value gets one of those cases wrong. If you are
 tempted to "simplify" the script by checking `$?`, this is why you should not.
 
@@ -53,12 +53,14 @@ Action running a Meterian scan on every branch. It was dropped so the autofix
 script is the only thing invoking the client — a scan firing on every push made
 demo runs confusing. Do not re-add it without asking.
 
-**Demos use `conservative+vulns`, not `aggressive`.** All three vulnerable
-demo dependencies are fixed by minor bumps, so `conservative` and `aggressive`
-produce byte-identical output and the same 0 → 100 score. Recommending
-`aggressive` where `conservative` suffices tells customers to accept major
-version upgrades for nothing. Escalate strategy only when the weaker one
-demonstrably leaves vulnerabilities unfixed.
+**Demos use bare `conservative`.** All three vulnerable demo dependencies are
+fixed by minor bumps, so `aggressive` fixes nothing extra and only invites major
+upgrades — escalate strategy only when the weaker one demonstrably leaves
+vulnerabilities unfixed. The reach is deliberately omitted: bare `conservative`
+also refreshes merely-outdated dependencies (it bumps commons-lang3 3.18.0 →
+3.20.0, stability 97 → 100), which was accepted as the friendlier default over
+the narrower `conservative+vulns`. Use `+vulns` when a diff limited strictly to
+CVE fixes matters more than brevity.
 
 ## Conventions
 

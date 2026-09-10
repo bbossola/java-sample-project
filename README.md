@@ -109,6 +109,15 @@ This is not a theoretical concern. Both of these runs applied fixes:
 A script that branched on `exit == 0` would miss the first; one that branched on
 `exit != 0` would miss the second.
 
+Not every non-zero code is a failed gate, though. The client returns a bitmask
+of 1–7 when a quality gate fails (1 security, 2 stability, 4 licensing) and a
+*negative* value on a hard error — a rejected token, an unsupported project, an
+unreachable server — which reaches the shell as 256 plus that value. The script
+treats anything above 7 as fatal and stops, because a scan that never ran must
+never be reported as "nothing to fix": in a scheduled job that reads exactly
+like a clean repository. See
+[controlling the exit code](https://docs.meterian.io/the-client/using-client-ci-cd/controlling-the-exit-code).
+
 ### Choosing a strategy
 
 The default is `safe+vulns,safe+dated+no-overrides`, which applies patch-level

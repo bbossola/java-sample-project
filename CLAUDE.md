@@ -29,6 +29,15 @@ having fixed one vulnerability, `conservative` exits 0 having fixed all three.
 Branching on either exit code value gets one of those cases wrong. If you are
 tempted to "simplify" the script by checking `$?`, this is why you should not.
 
+**A hard client error is fatal; a failed quality gate is not.** Exit codes 1-7
+are a bitmask of failed gates (1 security, 2 stability, 4 licensing) and are the
+normal outcome once autofix has changed something. Negative codes are hard
+errors and reach the shell as 256+code -- 255 is "no authorisation found". The
+first version of the script treated every non-zero code alike, so an on-premises
+run with a rejected token printed "nothing to fix" and exited 0. A broken scan
+reported as a clean repository is the worst failure mode this script has; keep
+the classification in `client_error` and never widen it back.
+
 **Preflight checks run before any work.** Missing tools, an unset
 `METERIAN_API_TOKEN`, and an unauthenticated `gh` are all caught up front, so
 the script never scans for several minutes and only then discovers it cannot

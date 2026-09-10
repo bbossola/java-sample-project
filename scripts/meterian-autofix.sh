@@ -149,6 +149,32 @@ resolve_client() {
     echo "$CLI_CACHE"
 }
 
+# --- client exit codes ------------------------------------------------------
+
+# The client returns 0 when everything passes, a bitmask of 1..7 when a quality
+# gate fails (1 security, 2 stability, 4 licensing), and a negative value on a
+# hard error -- which reaches the shell as 256 plus that value. A failed gate is
+# expected here: it is the usual outcome once autofix has changed something. A
+# hard error is not, and must never be mistaken for "nothing to fix".
+client_error() {
+    case "$1" in
+        255) echo "no authorisation found -- is METERIAN_API_TOKEN valid for this instance?" ;;
+        254) echo "failed to get authorisation via browser" ;;
+        253) echo "project unsupported" ;;
+        251) echo "a running build is already present" ;;
+        250) echo "analysis failed" ;;
+        249) echo "project URL was not specified" ;;
+        248) echo "error loading the configuration" ;;
+        247) echo "error communicating with the Meterian servers" ;;
+        246) echo "build tool not found" ;;
+        244) echo "plan limits exceeded" ;;
+        243) echo "no analysis was run" ;;
+        242) echo "troubleshooting failed" ;;
+        241) echo "system unsupported" ;;
+        *)   echo "unexpected exit code" ;;
+    esac
+}
+
 # --- main -------------------------------------------------------------------
 
 main() {
@@ -179,12 +205,16 @@ main() {
         || die "the fix branch and the source branch are both '$src_branch'; refusing to push onto it"
 
     log "running the Meterian client with autofix (instance: $CLI_HOST)"
-    # The client exits non-zero whenever the security score is below threshold,
-    # which is precisely the case where it has just fixed something. So its exit
-    # code cannot tell us whether fixes were applied -- git can. Report it and
-    # carry on.
+    # A non-zero gate result does not tell us whether fixes were applied -- it
+    # is precisely what we expect once autofix has lowered a score below the
+    # threshold by fixing something. Only git can answer that. A hard error,
+    # however, means the scan never happened, and is fatal.
     local rc=0
     java -jar "$jar" --interactive=false "--autofix${AUTOFIX_SPEC:+=$AUTOFIX_SPEC}" || rc=$?
+
+    if [ "$rc" -gt 7 ]; then
+        die "the Meterian client failed: $(client_error "$rc") (exit $rc)"
+    fi
     log "the client exited with code $rc"
 
     if [ -z "$(git status --porcelain)" ]; then

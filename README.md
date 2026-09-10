@@ -28,16 +28,43 @@ The script needs `git`, `java`, `mvn` and `curl`; `--pull-request` additionally
 needs an authenticated [`gh`](https://cli.github.com). The client jar is
 downloaded once and cached in `~/.meterian/`.
 
-### Notes
+### Why fixes are detected from git, not from the exit code
 
-- The client exits non-zero whenever the security score is below the minimum,
-  which is exactly the situation in which it has just applied fixes. The script
-  therefore decides whether to branch by looking at `git status`, not at the
-  exit code.
-- The default autofix strategy is `safe+vulns,safe+dated+no-overrides`, which
-  only applies patch-level updates. Vulnerabilities whose fix requires a minor
-  or major bump need `--autofix "conservative+vulns"` or `"aggressive+vulns"`,
-  at the usual risk of incompatible changes — always check the build before
-  merging.
+The client exits non-zero whenever the security score is below the minimum —
+which is precisely the case in which it has just applied fixes. The exit code
+therefore cannot tell you whether to branch, so the script decides on
+`git status --porcelain` instead.
+
+This is not a theoretical concern. Both of these runs applied fixes:
+
+| Invocation | Client exit code | Fixes applied |
+|---|---|---|
+| `--autofix` (default `safe`) | `1` | 1 of 3 — score still below minimum |
+| `--autofix "aggressive+vulns"` | `0` | 3 of 3 — score back above minimum |
+
+A script that branched on `exit == 0` would miss the first; one that branched on
+`exit != 0` would miss the second.
+
+### Choosing a strategy
+
+The default is `safe+vulns,safe+dated+no-overrides`, which applies patch-level
+updates only. Vulnerabilities whose fix needs a minor or major bump require
+`--autofix "conservative+vulns"` or `"aggressive+vulns"`, at the usual risk of
+incompatible changes. Measured against the `vulnerable-demo` branch:
+
+| Strategy | commons-collections 3.2.1 | jackson-databind 2.9.8 | log4j-core 2.17.0 | Security score |
+|---|---|---|---|---|
+| `safe` (default) | → 3.2.2 | unchanged | unchanged | 0 |
+| `aggressive+vulns` | → 3.2.2 | → 2.22.2 | → 2.26.1 | 100 |
+
+Always check that the build still passes before merging, especially with
+`aggressive`.
+
+### Other notes
+
+- The client's XML rewriter joins the `<?xml ...?>` declaration onto the
+  `<project>` line and drops the file's trailing newline. It is cosmetic, but it
+  shows up in every autofix diff. The script deliberately does not post-process
+  the client's output.
 - The `vulnerable-demo` branch carries deliberately vulnerable dependencies to
   demonstrate the script against.
